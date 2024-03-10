@@ -1,63 +1,22 @@
 version: '3'
 services:
-  product-db:
-    image: postgres:latest
-    ports:
-      - 5433:5432
-    environment:
-      - POSTGRES_USER=your_db_user
-      - POSTGRES_PASSWORD=your_db_password
-      - POSTGRES_DB=your_db
 
-  inventory-db:
-    image: postgres:latest
-    ports:
-      - 5432:5432
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
     environment:
-      - POSTGRES_USER=your_db_user
-      - POSTGRES_PASSWORD=your_db_password
-      - POSTGRES_DB=your_db
+      ZOOKEEPER_CLIENT_PORT: 2181
 
-  invento-hub-product-service:
-    image: codingwulf/invento-hub-product-service:latest
-    ports:
-      - 8080:8080
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
-      - PRODUCT_CREATE_TOPIC=product-create
-      - PRODUCT_UPDATE_TOPIC=product-update
-      - PRODUCT_DELETE_TOPIC=product-delete
-      - DB_USER=your_db_user
-      - DB_PASSWORD=your_db_password
-      - DB_CONNECTION_STRING=jdbc:postgresql://product-db:5433/your_db
+  kafka:
+    image: confluentinc/cp-kafka:latest
     depends_on:
-      - redpanda
-      - product-db
-
-  invento-hub-inventory-service:
-    image: codingwulf/invento-hub-inventory-service:latest
-    ports:
-      - 8081:8080
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
-      - PRODUCT_CREATE_TOPIC=product-create
-      - DB_USER=your_db_user
-      - DB_PASSWORD=your_db_password
-      - DB_CONNECTION_STRING=jdbc:postgresql://inventory-db:5432/your_db
-    depends_on:
-      - redpanda
-      - inventory-db
-
-  redpanda:
-    image: vectorized/redpanda:latest
-    command:
-      - redpanda start --smp 1
+      - zookeeper
     ports:
       - 9092:9092
     environment:
-      - REDPANDA_KAFKA_API_LISTENERS=PLAINTEXT://0.0.0.0:9092
-      - REDPANDA_ADMIN_API_LISTENERS=PLAINTEXT://0.0.0.0:9644
-      - REDPANDA_AUTO_CREATE_TOPICS_ENABLED=true
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CREATE_TOPICS: "product-create:1:1,product-update:1:1,product-delete:1:1"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -65,6 +24,61 @@ services:
       - 8082:8080
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=redpanda:9092
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
     depends_on:
-      - redpanda
+      - kafka
+
+  invento-hub-product-service:
+    image: codingwulf/invento-hub-product-service:latest
+    ports:
+      - 8080:8080
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - PRODUCT_CREATE_TOPIC=product-create
+      - PRODUCT_UPDATE_TOPIC=product-update
+      - PRODUCT_DELETE_TOPIC=product-delete
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_CONNECTION_STRING=jdbc:postgresql://product-db:5432/product
+    depends_on:
+      - kafka
+      - product-db
+
+  product-db:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=product
+
+
+  invento-hub-inventory-service:
+    image: codingwulf/invento-hub-inventory-service:latest
+    ports:
+      - 8081:8080
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - PRODUCT_CREATE_TOPIC=product-create
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_CONNECTION_STRING=jdbc:postgresql://inventory-db:5432/inventory
+    depends_on:
+      - kafka
+      - inventory-db
+
+  inventory-db:
+    image: postgres:latest
+    ports:
+      - 5666:5432
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=inventory
+
+
+
+
+
+
