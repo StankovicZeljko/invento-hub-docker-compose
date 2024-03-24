@@ -79,7 +79,30 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=product
 
+    invento-hub-order-service:
+    image: codingwulf/invento-hub-order-service:latest
+    ports:
+      - 8080:8080
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-0:9092
+      - ORDER_CREATE_TOPIC=order-create
+      - ORDER_UPDATE_TOPIC=product-update
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_CONNECTION_STRING=jdbc:postgresql://product-db:5432/product_order
+    depends_on:
+      - redpanda-0
+      - order-db
 
+  order-db:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=product
+      
   invento-hub-inventory-service:
     image: codingwulf/invento-hub-inventory-service:latest
     ports:
