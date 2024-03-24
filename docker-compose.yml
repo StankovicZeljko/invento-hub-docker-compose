@@ -79,7 +79,7 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=product
 
-    invento-hub-order-service:
+  invento-hub-order-service:
     image: codingwulf/invento-hub-order-service:latest
     ports:
       - 8080:8080
